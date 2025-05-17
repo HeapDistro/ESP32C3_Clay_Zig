@@ -3,4 +3,6 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(spi_master)
+project(clay_zig_esp_experiment)
+
+

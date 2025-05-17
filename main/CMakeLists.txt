@@ -5,4 +5,7 @@ set(srcs "pretty_effect.c"
 
 idf_component_register(SRCS ${srcs}
                     INCLUDE_DIRS "."
-                    EMBED_FILES image.jpg)
+                    EMBED_FILES image.jpg
+                    PRIV_REQUIRES clayZigESP32 esp_driver_gpio esp_driver_spi)
+
+

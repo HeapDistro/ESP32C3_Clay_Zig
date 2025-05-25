@@ -10,7 +10,8 @@ externalproject_add(clayZigESP32_build
     PREFIX ${COMPONENT_DIR}
     SOURCE_DIR ${COMPONENT_DIR}
     CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE 1
+    BUILD_IN_SOURCE 0
+    BUILD_DIR ${COMPONENT_DIR}/zig-out/lib
     BUILD_COMMAND zig build -Doptimize=ReleaseSafe
     INSTALL_COMMAND ""
     )
@@ -27,6 +28,6 @@ set_target_properties(clayZigESP32 PROPERTIES IMPORTED_LOCATION
 
 target_link_libraries(${COMPONENT_LIB} INTERFACE clayZigESP32)
 
-set_directory_properties( PROPERTIES ADDITIONAL_CLEAN_FILES
-  "${COMPONENT_DIR}/zig-out/lib/libclayZigESP32.a")
+#set_directory_properties( PROPERTIES ADDITIONAL_CLEAN_FILES
+#"${COMPONENT_DIR}/zig-out/lib/libclayZigESP32.a")
 

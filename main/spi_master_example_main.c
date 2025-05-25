@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "c_main.h"
 #include "pretty_effect.h"
 
 /*
@@ -32,7 +33,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////// Please update the following configuration according to your
-///HardWare spec /////////////////
+/// HardWare spec /////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define LCD_HOST SPI2_HOST
 
@@ -175,6 +176,8 @@ DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[] = {
     {0x29, {0}, 0x80},
     {0, {0}, 0xff},
 };
+
+static spi_device_handle_t spi;
 
 /* Send a command to the LCD. Uses spi_device_polling_transmit, which waits
  * until the transfer is complete.
@@ -321,7 +324,7 @@ void lcd_init(spi_device_handle_t spi) {
  * faster (compared to calling spi_device_transmit several times), and at the
  * mean while the lines for next transactions can get calculated.
  */
-static void send_lines(spi_device_handle_t spi, int ypos, uint16_t *linedata) {
+void send_lines(int ypos, uint16_t *linedata) {
   esp_err_t ret;
   int x;
   // Transaction descriptors. Declared static so they're not allocated on the
@@ -375,7 +378,7 @@ static void send_lines(spi_device_handle_t spi, int ypos, uint16_t *linedata) {
   // be done and check their status.
 }
 
-static void send_line_finish(spi_device_handle_t spi) {
+static void send_line_finish() {
   spi_transaction_t *rtrans;
   esp_err_t ret;
   // Wait for all 6 transactions to be done and get back the results.
@@ -391,14 +394,8 @@ static void send_line_finish(spi_device_handle_t spi) {
 // expect anything too impressive. Because the SPI driver handles transactions
 // in the background, we can calculate the next line while the previous one is
 // being sent.
-static void display_pretty_colors(spi_device_handle_t spi) {
-  uint16_t *lines[2];
-  // Allocate memory for the pixel buffers
-  for (int i = 0; i < 2; i++) {
-    lines[i] = spi_bus_dma_memory_alloc(
-        LCD_HOST, 320 * PARALLEL_LINES * sizeof(uint16_t), 0);
-    assert(lines[i] != NULL);
-  }
+void display_pretty_colors(uint16_t *lines[2]) {
+
   int frame = 0;
   // Indexes of the line currently being sent to the LCD and the line we're
   // calculating.
@@ -412,13 +409,13 @@ static void display_pretty_colors(spi_device_handle_t spi) {
       pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES);
       // Finish up the sending process of the previous line, if any
       if (sending_line != -1) {
-        send_line_finish(spi);
+        send_line_finish();
       }
       // Swap sending_line and calc_line
       sending_line = calc_line;
       calc_line = (calc_line == 1) ? 0 : 1;
       // Send the line we currently calculated.
-      send_lines(spi, y, lines[sending_line]);
+      send_lines(y, lines[sending_line]);
       // The line set is queued up for sending now; the actual sending happens
       // in the background. We can go on to calculate the next line set as long
       // as we do not touch line[sending_line]; the SPI sending process is still
@@ -427,43 +424,45 @@ static void display_pretty_colors(spi_device_handle_t spi) {
   }
 }
 
-#if 0
-void app_main(void)
-{
-    esp_err_t ret;
-    spi_device_handle_t spi;
-    spi_bus_config_t buscfg = {
-        .miso_io_num = PIN_NUM_MISO,
-        .mosi_io_num = PIN_NUM_MOSI,
-        .sclk_io_num = PIN_NUM_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = PARALLEL_LINES * 320 * 2 + 8
-    };
-    spi_device_interface_config_t devcfg = {
+void init_spi(uint16_t *lines[2]) {
+  esp_err_t ret;
+  spi_bus_config_t buscfg = {.miso_io_num = PIN_NUM_MISO,
+                             .mosi_io_num = PIN_NUM_MOSI,
+                             .sclk_io_num = PIN_NUM_CLK,
+                             .quadwp_io_num = -1,
+                             .quadhd_io_num = -1,
+                             .max_transfer_sz = PARALLEL_LINES * 320 * 2 + 8};
+  spi_device_interface_config_t devcfg = {
 #ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz = 26 * 1000 * 1000,     //Clock out at 26 MHz
+      .clock_speed_hz = 26 * 1000 * 1000, // Clock out at 26 MHz
 #else
-        .clock_speed_hz = 10 * 1000 * 1000,     //Clock out at 10 MHz
+      .clock_speed_hz = 10 * 1000 * 1000, // Clock out at 10 MHz
 #endif
-        .mode = 0,                              //SPI mode 0
-        .spics_io_num = PIN_NUM_CS,             //CS pin
-        .queue_size = 7,                        //We want to be able to queue 7 transactions at a time
-        .pre_cb = lcd_spi_pre_transfer_callback, //Specify pre-transfer callback to handle D/C line
-    };
-    //Initialize the SPI bus
-    ret = spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_ERROR_CHECK(ret);
-    //Attach the LCD to the SPI bus
-    ret = spi_bus_add_device(LCD_HOST, &devcfg, &spi);
-    ESP_ERROR_CHECK(ret);
-    //Initialize the LCD
-    lcd_init(spi);
-    //Initialize the effect displayed
-    ret = pretty_effect_init();
-    ESP_ERROR_CHECK(ret);
+      .mode = 0,                  // SPI mode 0
+      .spics_io_num = PIN_NUM_CS, // CS pin
+      .queue_size = 7, // We want to be able to queue 7 transactions at a time
+      .pre_cb = lcd_spi_pre_transfer_callback, // Specify pre-transfer callback
+                                               // to handle D/C line
+  };
+  // Initialize the SPI bus
+  ret = spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
+  ESP_ERROR_CHECK(ret);
+  // Attach the LCD to the SPI bus
+  ret = spi_bus_add_device(LCD_HOST, &devcfg, &spi);
+  ESP_ERROR_CHECK(ret);
+  // Initialize the LCD
+  lcd_init(spi);
+  // Initialize the effect displayed
+  ret = pretty_effect_init();
+  ESP_ERROR_CHECK(ret);
 
-    //Go do nice stuff.
-    display_pretty_colors(spi);
+  // Go do nice stuff.
+  // display_pretty_colors(spi);
+
+  // Allocate memory for the pixel buffers
+  for (int i = 0; i < 2; i++) {
+    lines[i] = spi_bus_dma_memory_alloc(
+        LCD_HOST, 320 * PARALLEL_LINES * sizeof(uint16_t), 0);
+    assert(lines[i] != NULL);
+  }
 }
-#endif

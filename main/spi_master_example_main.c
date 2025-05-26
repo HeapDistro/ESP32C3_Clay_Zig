@@ -37,16 +37,16 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define LCD_HOST SPI2_HOST
 
-#define PIN_NUM_MISO 25
-#define PIN_NUM_MOSI 23
-#define PIN_NUM_CLK 19
-#define PIN_NUM_CS 22
+#define PIN_NUM_MISO 7
+#define PIN_NUM_MOSI 2
+#define PIN_NUM_CLK 6
+#define PIN_NUM_CS 10
 
-#define PIN_NUM_DC 21
-#define PIN_NUM_RST 18
-#define PIN_NUM_BCKL 5
+#define PIN_NUM_DC 9
+#define PIN_NUM_RST 8
+#define PIN_NUM_BCKL 18
 
-#define LCD_BK_LIGHT_ON_LEVEL 0
+#define LCD_BK_LIGHT_ON_LEVEL 1
 
 // To speed up transfers, every SPI transfer sends a bunch of lines. This define
 // specifies how many. More means more memory use, but less overhead for setting
@@ -395,6 +395,7 @@ static void send_line_finish() {
 // in the background, we can calculate the next line while the previous one is
 // being sent.
 void display_pretty_colors(uint16_t *lines[2]) {
+  printf("here1\n");
 
   int frame = 0;
   // Indexes of the line currently being sent to the LCD and the line we're
@@ -403,6 +404,7 @@ void display_pretty_colors(uint16_t *lines[2]) {
   int calc_line = 0;
 
   while (1) {
+    printf("here2\n");
     frame++;
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
       // Calculate a line.

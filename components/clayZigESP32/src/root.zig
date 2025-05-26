@@ -11,21 +11,16 @@ extern fn send_line_finish() void;
 extern fn send_lines(ypos: c_int, linedata: *c_ushort) void;
 
 var allocMem: [5000]u8 = [_]u8{0} ** 5000;
-var fixedAllocator: std.heap.FixedBufferAllocator = undefined;
-var allocator: std.mem.Allocator = undefined;
-
-var lines: [*c][*c]u16 = undefined;
+var linesOrg: [2]u16 = .{0} ** 2;
+var lines: [*c][*c]u16 = @as([*c][*c]u16,@alignCast(@ptrCast(&linesOrg)));
 const PARALLEL_LINES: comptime_int = 16;
 
 pub export fn app_main() void {
     // Init allocator
-    fixedAllocator = std.heap.FixedBufferAllocator.init(&allocMem);
-    allocator = fixedAllocator.allocator();
-
+    clay.Clay_SetMaxElementCount(1);
     const minMemorySize: u32 = clay.Clay_MinMemorySize();
-    const memory = allocator.alloc(u8, minMemorySize) catch return;
-    //defer allocator.free(memory);
-    const arena: clay.Clay_Arena = clay.Clay_CreateArenaWithCapacityAndMemory(minMemorySize,@as(*anyopaque,@ptrCast(memory)));
+    if (minMemorySize > @sizeOf(@TypeOf(allocMem))) return;
+    const arena: clay.Clay_Arena = clay.Clay_CreateArenaWithCapacityAndMemory(@sizeOf(@TypeOf(allocMem)),@as(*anyopaque,@ptrCast(&allocMem)));
     const dimensions: clay.Clay_Dimensions = .{.height = 240, .width= 320};
     const clayError: clay.Clay_ErrorHandler = .{ .errorHandlerFunction = null};
     _ = clay.Clay_Initialize(arena, dimensions, clayError);

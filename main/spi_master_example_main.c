@@ -378,7 +378,7 @@ void send_lines(int ypos, uint16_t *linedata) {
   // be done and check their status.
 }
 
-static void send_line_finish() {
+void send_line_finish() {
   spi_transaction_t *rtrans;
   esp_err_t ret;
   // Wait for all 6 transactions to be done and get back the results.
@@ -395,8 +395,6 @@ static void send_line_finish() {
 // in the background, we can calculate the next line while the previous one is
 // being sent.
 void display_pretty_colors(uint16_t *lines[2]) {
-  printf("here1\n");
-
   int frame = 0;
   // Indexes of the line currently being sent to the LCD and the line we're
   // calculating.
@@ -404,7 +402,6 @@ void display_pretty_colors(uint16_t *lines[2]) {
   int calc_line = 0;
 
   while (1) {
-    printf("here2\n");
     frame++;
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
       // Calculate a line.
@@ -455,8 +452,8 @@ void init_spi(uint16_t *lines[2]) {
   // Initialize the LCD
   lcd_init(spi);
   // Initialize the effect displayed
-  ret = pretty_effect_init();
-  ESP_ERROR_CHECK(ret);
+  // ret = pretty_effect_init();
+  // ESP_ERROR_CHECK(ret);
 
   // Go do nice stuff.
   // display_pretty_colors(spi);

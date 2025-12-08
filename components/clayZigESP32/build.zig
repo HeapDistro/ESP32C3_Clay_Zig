@@ -35,13 +35,17 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib_mod.sanitize_c = false;
+    lib_mod.sanitize_c = .off;
     lib_mod.error_tracing = false;
     lib_mod.addIncludePath(.{ .cwd_relative = "./../../main/" });
     lib_mod.addIncludePath(.{ .cwd_relative = "src/" });
-    lib_mod.addCSourceFile(.{
-        .file = .{ .cwd_relative = "src/clay.c" },
+    lib_mod.addCSourceFile(.{ .file = .{ .cwd_relative = "src/clay.c" } });
+
+    const zclay_dep = b.dependency("zclay", .{
+        .target = target,
+        .optimize = optimize,
     });
+    lib_mod.addImport("zclay", zclay_dep.module("zclay"));
 
     // Now, we will create a static library based on the module we created above.
     // This creates a `std.Build.Step.Compile`, which is the build step responsible

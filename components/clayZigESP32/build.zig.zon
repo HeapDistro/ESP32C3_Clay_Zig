@@ -37,8 +37,8 @@
     // internet connectivity.
     .dependencies = .{
         .zclay = .{
-            .url = "git+https://github.com/johan0A/clay-zig-bindings?ref=v0.13#582095c4b7c5437f5a4fc9e0cebee289cff9ae47",
-            .hash = "zclay-0.0.0-Ej1rkHDHAAAhiGLPEcSBnJks-km949W9HO4lO0Kr1k4U",
+            .url = "git+https://github.com/johan0A/clay-zig-bindings.git/#d594f9c8c745bec64394f7f6e5ff061134d7af9b",
+            .hash = "zclay-0.2.2-Ej1rkOzRAADy3oyFJ0I3aIJp38Kwsv9DMa0XWt84dRVW",
         },
     },
     .paths = .{

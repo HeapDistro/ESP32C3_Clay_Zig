@@ -17,7 +17,6 @@
 #include <string.h>
 
 #include "c_main.h"
-#include "pretty_effect.h"
 
 /*
  This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT
@@ -395,24 +394,24 @@ void send_line_finish() {
 // in the background, we can calculate the next line while the previous one is
 // being sent.
 void display_pretty_colors(uint16_t *lines[2]) {
-  int frame = 0;
-  // Indexes of the line currently being sent to the LCD and the line we're
-  // calculating.
+  // int frame = 0;
+  // // Indexes of the line currently being sent to the LCD and the line we're
+  // // calculating.
   int sending_line = -1;
-  int calc_line = 0;
+  // int calc_line = 0;
 
   while (1) {
-    frame++;
+    // frame++;
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
       // Calculate a line.
-      pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES);
+      // pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES);
       // Finish up the sending process of the previous line, if any
-      if (sending_line != -1) {
-        send_line_finish();
-      }
-      // Swap sending_line and calc_line
-      sending_line = calc_line;
-      calc_line = (calc_line == 1) ? 0 : 1;
+      // if (sending_line != -1) {
+      //   send_line_finish();
+      // }
+      // // Swap sending_line and calc_line
+      // sending_line = calc_line;
+      // calc_line = (calc_line == 1) ? 0 : 1;
       // Send the line we currently calculated.
       send_lines(y, lines[sending_line]);
       // The line set is queued up for sending now; the actual sending happens

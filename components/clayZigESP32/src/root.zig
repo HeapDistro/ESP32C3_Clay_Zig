@@ -10,7 +10,7 @@ const Bitmap = struct {
     bitmap: [HEIGHT][WIDTH]u16,
 };
 
-var allocMem: [100000]u8 = [_]u8{0} ** 100000;
+var allocMem: [90000]u8 = [_]u8{0} ** 90000;
 var linesOrg: [2]u16 = .{0} ** 2;
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
 const PARALLEL_LINES: comptime_int = 16;

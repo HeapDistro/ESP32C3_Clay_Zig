@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSafe });
 
     // This creates a "module", which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
@@ -39,7 +39,10 @@ pub fn build(b: *std.Build) void {
     lib_mod.error_tracing = false;
     lib_mod.addIncludePath(.{ .cwd_relative = "./../../main/" });
     lib_mod.addIncludePath(.{ .cwd_relative = "src/" });
-    lib_mod.addCSourceFile(.{ .file = .{ .cwd_relative = "src/clay.c" } });
+    lib_mod.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/clay.c" },
+        .flags = &.{ "-Oz", "" },
+    });
 
     const zclay_dep = b.dependency("zclay", .{
         .target = target,

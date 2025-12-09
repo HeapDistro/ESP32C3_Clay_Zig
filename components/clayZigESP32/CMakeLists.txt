@@ -12,7 +12,7 @@ externalproject_add(clayZigESP32_build
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 0
     BUILD_DIR ${COMPONENT_DIR}/zig-out/lib
-    BUILD_COMMAND zig build -Doptimize=ReleaseSafe
+    BUILD_COMMAND zig build
     INSTALL_COMMAND ""
     )
 

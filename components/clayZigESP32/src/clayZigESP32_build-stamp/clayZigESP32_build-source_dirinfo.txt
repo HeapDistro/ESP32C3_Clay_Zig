@@ -4,6 +4,6 @@
 
 method=source_dir
 command=
-source_dir=/home/asurans/Downloads/esp32c3_sample/lcd_dev/components/clayZigESP32
+source_dir=C:/Users/Administrator/Downloads/esp32c3_zig_clay/lcd_dev/components/clayZigESP32
 work_dir=
 

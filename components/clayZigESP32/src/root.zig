@@ -44,7 +44,7 @@ pub export fn app_main() void {
                     .padding = .all(4),
                     .child_gap = 2,
                 },
-                .background_color = .{ 250, 250, 255, 255 },
+                .background_color = .{ 250, 0, 255, 255 },
             },
         )({
             clay.UI()(
@@ -64,7 +64,7 @@ pub export fn app_main() void {
                         .layout = .{
                             .sizing = .{ .w = .grow, .h = .grow },
                         },
-                        .background_color = .{ 127, 127, 127, 255 },
+                        .background_color = .{ 127, 127, 0, 255 },
                     },
                 )({});
             });

@@ -10,9 +10,10 @@ const Bitmap = struct {
     const HEIGHT = 240;
     const WIDTH = 320;
     bitmap: [HEIGHT][WIDTH]u16,
+    const DPI: u8 = 143; //TODO: should be a comptime calculation based off aspect ration and screen size
 };
 
-var allocMem: [90000]u8 = [_]u8{0} ** 90000;
+var allocMem: [50000]u8 = @splat(0);
 
 var linesOrg: [2]u16 = .{0} ** 2;
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
@@ -20,14 +21,15 @@ const PARALLEL_LINES: comptime_int = 16;
 //BLUE 5 bits RED 5 bits GREEN 6 bits
 var frame: Bitmap = .{ .bitmap = .{.{0b0000000000000000} ** Bitmap.WIDTH} ** Bitmap.HEIGHT };
 
-var library_alloc_buffer: [5000]u8 = [_]u8{0} ** 5000;
+var library_alloc_buffer: [5000]u8 = @splat(0);
 var library: freetype.Library = undefined;
+var face: freetype.Face = undefined;
 
 pub export fn app_main() void {
     // Init allocator
     clay.setMaxElementCount(20);
     const minMemorySize: u32 = clay.minMemorySize();
-    if (minMemorySize > @sizeOf(@TypeOf(allocMem))) return;
+    if (minMemorySize > @sizeOf(@TypeOf(allocMem))) @panic("Clay minimum memory size is bigger than given buffer.");
     const arena: clay.Arena = clay.createArenaWithCapacityAndMemory(&allocMem);
     const dimensions: clay.Dimensions = .{ .h = 240, .w = 320 };
     const clayError: clay.ErrorHandler = .{ .error_handler_function = null };
@@ -41,6 +43,10 @@ pub export fn app_main() void {
 
     library = freetype.Library.init(freetype_allocator) catch unreachable;
     defer library.deinit();
+
+    face = library.memoryFace(font_file, @sizeOf(@TypeOf(font_file))) catch unreachable;
+    defer face.deinit();
+    face.setCharSize(2, 3, Bitmap.DPI, Bitmap.DPI) catch unreachable;
 
     while (true) {
         // TODO: If touch is ever implemented update the pointer state here
@@ -135,8 +141,16 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
         switch (command.command_type) {
             .none => {},
             .text => {
-                //command.render_data.text.
-            }, // NOT IMPLEMENTED
+                const text = command.render_data.text;
+                for (0..@as(usize, @intCast(text.string_contents.length))) |i| {
+                    var glyph = face.getGlyph(text.string_contents.base_chars[i]) catch unreachable;
+                    defer glyph.deinit();
+                    const glyph_bitmap = glyph.glyphBitmap() catch unreachable;
+                    _ = glyph_bitmap;
+                    // glyph_bitmap.bitmap.buffer
+                    // frame
+                }
+            },
             .image => {}, // NOT IMPLEMENTED
             .scissor_start => {
                 scissorBox = bounding_box;

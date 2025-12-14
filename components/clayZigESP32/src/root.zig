@@ -3,6 +3,8 @@ const spi = @cImport({
     @cInclude("c_main.h");
 });
 const clay = @import("zclay");
+const freetype = @import("freetype2");
+const font_file = @embedFile("console.ttf");
 
 const Bitmap = struct {
     const HEIGHT = 240;
@@ -11,11 +13,15 @@ const Bitmap = struct {
 };
 
 var allocMem: [90000]u8 = [_]u8{0} ** 90000;
+
 var linesOrg: [2]u16 = .{0} ** 2;
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
 const PARALLEL_LINES: comptime_int = 16;
 //BLUE 5 bits RED 5 bits GREEN 6 bits
-var frame: Bitmap = .{ .bitmap = .{.{0b0000000000111111} ** Bitmap.WIDTH} ** Bitmap.HEIGHT };
+var frame: Bitmap = .{ .bitmap = .{.{0b0000000000000000} ** Bitmap.WIDTH} ** Bitmap.HEIGHT };
+
+var library_alloc_buffer: [5000]u8 = [_]u8{0} ** 5000;
+var library: freetype.Library = undefined;
 
 pub export fn app_main() void {
     // Init allocator
@@ -29,6 +35,13 @@ pub export fn app_main() void {
     clay.setMeasureTextFunction(void, {}, measureText);
 
     spi.init_spi(lines);
+
+    var fba = std.heap.FixedBufferAllocator.init(&library_alloc_buffer);
+    const freetype_allocator = fba.allocator();
+
+    library = freetype.Library.init(freetype_allocator) catch unreachable;
+    defer library.deinit();
+
     while (true) {
         // TODO: If touch is ever implemented update the pointer state here
         //clay.Clay_SetPointerState()
@@ -42,7 +55,7 @@ pub export fn app_main() void {
                 .layout = .{
                     .sizing = .{ .w = .grow, .h = .grow },
                     .padding = .all(4),
-                    .child_gap = 2,
+                    .child_gap = 4,
                 },
                 .background_color = .{ 250, 0, 255, 255 },
             },
@@ -52,12 +65,13 @@ pub export fn app_main() void {
                     .id = .ID("SideBar"),
                     .layout = .{
                         .direction = .top_to_bottom,
-                        .sizing = .{ .w = .fixed(100), .h = .grow },
+                        .sizing = .{ .w = .fixed(100), .h = .fixed(200) },
                         .padding = .all(4),
                         .child_gap = 4,
                     },
                 },
             )({
+                clay.text("Clay - UI Library\n", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
                 clay.UI()(
                     .{
                         .id = .ID("MainContent"),
@@ -120,7 +134,9 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
         };
         switch (command.command_type) {
             .none => {},
-            .text => {}, // NOT IMPLEMENTED
+            .text => {
+                //command.render_data.text.
+            }, // NOT IMPLEMENTED
             .image => {}, // NOT IMPLEMENTED
             .scissor_start => {
                 scissorBox = bounding_box;

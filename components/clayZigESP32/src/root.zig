@@ -126,6 +126,24 @@ fn bitmapDrawRectangle(
         }
     }
 }
+fn drawFont(font_bitmap: freetype.Glyph.FT_Bitmap, x: u16, y: u16) void {
+    const x_max = x + font_bitmap.width;
+    const y_max = y + font_bitmap.rows;
+
+    if (font_bitmap.buffer) |buffer| {
+        for (x..x_max, 0..) |i, p| {
+            for (y..y_max, 0..) |j, q| {
+                if (i < 0 or j < 0 or
+                    i >= Bitmap.WIDTH or j >= Bitmap.HEIGHT)
+                {
+                    continue;
+                }
+
+                frame.bitmap[j][i] |= buffer[q * font_bitmap.width + p];
+            }
+        }
+    } else @panic("Font bitmap's buffer is invalid.");
+}
 
 fn clayRender(render_commands: []clay.RenderCommand) void {
     const fullWindow: clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
@@ -146,9 +164,7 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                     var glyph = face.getGlyph(text.string_contents.base_chars[i]) catch unreachable;
                     defer glyph.deinit();
                     const glyph_bitmap = glyph.glyphBitmap() catch unreachable;
-                    _ = glyph_bitmap;
-                    // glyph_bitmap.bitmap.buffer
-                    // frame
+                    drawFont(glyph_bitmap.bitmap, @intFromFloat(bounding_box.x), @intFromFloat(bounding_box.y));
                 }
             },
             .image => {}, // NOT IMPLEMENTED

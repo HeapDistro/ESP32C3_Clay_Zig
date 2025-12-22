@@ -17,8 +17,8 @@ pub fn build(b: *std.Build) void {
                 .zaamo,
                 .zalrsc,
                 .a,
-                .f,
-                .d,
+                //.f,
+                //.d,
                 .c,
                 .m,
             }),
@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) void {
     freetype_module.linkSystemLibrary("c", .{ .needed = true, .preferred_link_mode = .static, .weak = false });
 
     lib_mod.addImport("freetype2", freetype_module);
+    lib_mod.addAnonymousImport("font", .{ .root_source_file = .{ .cwd_relative = "src/console.ttf" } });
 
     const lib = b.addLibrary(.{
         .linkage = .static,

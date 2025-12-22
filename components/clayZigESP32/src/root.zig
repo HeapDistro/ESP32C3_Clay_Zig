@@ -4,7 +4,7 @@ const spi = @cImport({
 });
 const clay = @import("zclay");
 const freetype = @import("freetype2");
-const font_file = @embedFile("console.ttf");
+const font_file = @embedFile("font");
 
 const Bitmap = struct {
     const HEIGHT = 240;
@@ -21,7 +21,7 @@ const PARALLEL_LINES: comptime_int = 16;
 //BLUE 5 bits RED 5 bits GREEN 6 bits
 var frame: Bitmap = .{ .bitmap = .{.{0b0000000000000000} ** Bitmap.WIDTH} ** Bitmap.HEIGHT };
 
-var library_alloc_buffer: [5000]u8 = @splat(0);
+var library_alloc_buffer: [20000]u8 = @splat(0);
 var library: freetype.Library = undefined;
 var face: freetype.Face = undefined;
 
@@ -44,9 +44,9 @@ pub export fn app_main() void {
     library = freetype.Library.init(freetype_allocator) catch unreachable;
     defer library.deinit();
 
-    face = library.memoryFace(font_file, @sizeOf(@TypeOf(font_file))) catch unreachable;
+    face = library.memoryFace(font_file, 3) catch unreachable;
     defer face.deinit();
-    face.setCharSize(2, 3, Bitmap.DPI, Bitmap.DPI) catch unreachable;
+    // face.setCharSize(2, 3, Bitmap.DPI, Bitmap.DPI) catch unreachable;
 
     while (true) {
         // TODO: If touch is ever implemented update the pointer state here
@@ -159,13 +159,13 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
         switch (command.command_type) {
             .none => {},
             .text => {
-                const text = command.render_data.text;
-                for (0..@as(usize, @intCast(text.string_contents.length))) |i| {
-                    var glyph = face.getGlyph(text.string_contents.base_chars[i]) catch unreachable;
-                    defer glyph.deinit();
-                    const glyph_bitmap = glyph.glyphBitmap() catch unreachable;
-                    drawFont(glyph_bitmap.bitmap, @intFromFloat(bounding_box.x), @intFromFloat(bounding_box.y));
-                }
+                // const text = command.render_data.text;
+                // for (0..@as(usize, @intCast(text.string_contents.length))) |i| {
+                //     var glyph = face.getGlyph(text.string_contents.base_chars[i]) catch unreachable;
+                //     defer glyph.deinit();
+                //     const glyph_bitmap = glyph.glyphBitmap() catch unreachable;
+                //     drawFont(glyph_bitmap.bitmap, @intFromFloat(bounding_box.x), @intFromFloat(bounding_box.y));
+                // }
             },
             .image => {}, // NOT IMPLEMENTED
             .scissor_start => {

@@ -16,7 +16,7 @@ fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_li
 }
 const truetype = @import("truetype");
 const ttf = truetype.load(@embedFile("font")) catch unreachable;
-const scale = ttf.scaleForPixelHeight(1);
+const scale = ttf.scaleForPixelHeight(20);
 
 const Bitmap = struct {
     const HEIGHT = 240;
@@ -26,7 +26,7 @@ const Bitmap = struct {
 };
 
 var allocMem: [50000]u8 = @splat(0);
-var library_alloc_buffer: [5000]u8 = @splat(0);
+var library_alloc_buffer: [10000]u8 = @splat(0);
 
 var linesOrg: [2]u16 = .{0} ** 2;
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
@@ -143,19 +143,26 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 var fba = std.heap.FixedBufferAllocator.init(&library_alloc_buffer);
                 const fba_allocator = fba.allocator();
                 var buffer: std.ArrayListUnmanaged(u8) = .empty;
-                var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
-                while (it.nextCodepoint()) |codepoint| {
+                //var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
+                var it = (std.unicode.Utf8View.init("Ola") catch unreachable).iterator();
+                var f_idx: usize = 150;
+                while (it.nextCodepoint()) |codepoint| : (f_idx += 20) {
                     if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
                         buffer.clearRetainingCapacity();
                         const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch |err| switch (err) {
-                            error.OutOfMemory => truetype.GlyphBitmap.empty,
-                            error.GlyphNotFound => truetype.GlyphBitmap.empty,
-                            error.Charstring => truetype.GlyphBitmap.empty,
+                            // Trap errors for debugging
+                            error.OutOfMemory => while (true) {},
+                            error.GlyphNotFound => while (true) {}, // error being called ???
+                            error.Charstring => while (true) {},
                         };
                         const pixels = buffer.items;
-                        for (0..dims.height) |j| {
-                            for (0..dims.width) |i| {
-                                frame.bitmap[j][i] |= pixels[j * dims.width + i];
+                        for (0..dims.height) |i| {
+                            //const y_base: usize = @intFromFloat(bounding_box.y);
+                            const y_base: usize = 100;
+                            for (0..dims.width) |j| {
+                                //const x_base: usize = @intFromFloat(bounding_box.x);
+                                const x_base: usize = f_idx;
+                                frame.bitmap[y_base + j][x_base + i] = pixels[j * dims.width + i] >> 5;
                             }
                         }
                     }

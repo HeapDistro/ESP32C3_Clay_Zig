@@ -1,5 +1,8 @@
 */build/*
+build/*
 components/clayZigESP32/zig-out/*
 components/clayZigESP32/.zig-cache/*
 .cache/*
 components/clayZigESP32/build/*
+components/clayZigESP32/tmp/*
+components/clayZigESP32/src/clayZigESP32_build-stamp/*

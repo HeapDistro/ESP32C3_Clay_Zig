@@ -144,9 +144,9 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 const fba_allocator = fba.allocator();
                 var buffer: std.ArrayListUnmanaged(u8) = .empty;
                 //var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
-                var it = (std.unicode.Utf8View.init("Ola") catch unreachable).iterator();
-                var f_idx: usize = 150;
-                while (it.nextCodepoint()) |codepoint| : (f_idx += 20) {
+                var it = (std.unicode.Utf8View.init("HELLOKIKO") catch unreachable).iterator();
+                var f_idx: usize = 100;
+                while (it.nextCodepoint()) |codepoint| : (f_idx += 15) {
                     if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
                         buffer.clearRetainingCapacity();
                         const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch |err| switch (err) {
@@ -162,7 +162,7 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                             for (0..dims.width) |j| {
                                 //const x_base: usize = @intFromFloat(bounding_box.x);
                                 const x_base: usize = f_idx;
-                                frame.bitmap[y_base + j][x_base + i] = pixels[j * dims.width + i] >> 5;
+                                frame.bitmap[y_base + i][x_base + j] = pixels[i * dims.width + j] >> 5;
                             }
                         }
                     }

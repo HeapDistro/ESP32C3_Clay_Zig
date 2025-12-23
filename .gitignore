@@ -1,4 +1,4 @@
-build/*
+*/build/*
 components/clayZigESP32/zig-out/*
 components/clayZigESP32/.zig-cache/*
 .cache/*

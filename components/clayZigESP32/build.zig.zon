@@ -40,9 +40,9 @@
             .url = "git+https://github.com/johan0A/clay-zig-bindings.git/#d594f9c8c745bec64394f7f6e5ff061134d7af9b",
             .hash = "zclay-0.2.2-Ej1rkOzRAADy3oyFJ0I3aIJp38Kwsv9DMa0XWt84dRVW",
         },
-        .zig_freetype2 = .{
-            .url = "git+https://github.com/PaNDa2code/zig_freetype2#74bbedfad57d7ccc2e12fba9162123ad8adaef42",
-            .hash = "zig_freetype2-0.0.0-Yvn9x8VwAABxwv6ArXvo2F5_yp-mH7didCapQLHpPqab",
+        .TrueType = .{
+            .url = "git+https://codeberg.org/andrewrk/TrueType#604d4e185e4a06a60a82c5b1212fcac15e1f19a4",
+            .hash = "TrueType-0.0.0-Ne-mWPNvAQC1vPUhKTIwuwMr2_bIRK4jUROcNoDtqws2",
         },
     },
     .paths = .{

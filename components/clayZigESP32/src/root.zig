@@ -1,10 +1,22 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const spi = @cImport({
     @cInclude("c_main.h");
 });
+
 const clay = @import("zclay");
-const freetype = @import("freetype2");
-const font_file = @embedFile("font");
+
+pub const std_options: std.Options = .{ .logFn = logFn };
+
+fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_literal), comptime format: []const u8, args: anytype) void {
+    _ = message_level;
+    _ = scope;
+    _ = format;
+    _ = args;
+}
+const truetype = @import("truetype");
+const ttf = truetype.load(@embedFile("font")) catch unreachable;
+const scale = ttf.scaleForPixelHeight(20);
 
 const Bitmap = struct {
     const HEIGHT = 240;
@@ -14,16 +26,13 @@ const Bitmap = struct {
 };
 
 var allocMem: [50000]u8 = @splat(0);
+var library_alloc_buffer: [5000]u8 = @splat(0);
 
 var linesOrg: [2]u16 = .{0} ** 2;
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
 const PARALLEL_LINES: comptime_int = 16;
 //BLUE 5 bits RED 5 bits GREEN 6 bits
-var frame: Bitmap = .{ .bitmap = .{.{0b0000000000000000} ** Bitmap.WIDTH} ** Bitmap.HEIGHT };
-
-var library_alloc_buffer: [20000]u8 = @splat(0);
-var library: freetype.Library = undefined;
-var face: freetype.Face = undefined;
+var frame: Bitmap = .{ .bitmap = @splat(@splat(0)) };
 
 pub export fn app_main() void {
     // Init allocator
@@ -37,16 +46,6 @@ pub export fn app_main() void {
     clay.setMeasureTextFunction(void, {}, measureText);
 
     spi.init_spi(lines);
-
-    var fba = std.heap.FixedBufferAllocator.init(&library_alloc_buffer);
-    const freetype_allocator = fba.allocator();
-
-    library = freetype.Library.init(freetype_allocator) catch unreachable;
-    defer library.deinit();
-
-    face = library.memoryFace(font_file, 3) catch unreachable;
-    defer face.deinit();
-    // face.setCharSize(2, 3, Bitmap.DPI, Bitmap.DPI) catch unreachable;
 
     while (true) {
         // TODO: If touch is ever implemented update the pointer state here
@@ -126,24 +125,6 @@ fn bitmapDrawRectangle(
         }
     }
 }
-fn drawFont(font_bitmap: freetype.Glyph.FT_Bitmap, x: u16, y: u16) void {
-    const x_max = x + font_bitmap.width;
-    const y_max = y + font_bitmap.rows;
-
-    if (font_bitmap.buffer) |buffer| {
-        for (x..x_max, 0..) |i, p| {
-            for (y..y_max, 0..) |j, q| {
-                if (i < 0 or j < 0 or
-                    i >= Bitmap.WIDTH or j >= Bitmap.HEIGHT)
-                {
-                    continue;
-                }
-
-                frame.bitmap[j][i] |= buffer[q * font_bitmap.width + p];
-            }
-        }
-    } else @panic("Font bitmap's buffer is invalid.");
-}
 
 fn clayRender(render_commands: []clay.RenderCommand) void {
     const fullWindow: clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
@@ -159,13 +140,22 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
         switch (command.command_type) {
             .none => {},
             .text => {
-                // const text = command.render_data.text;
-                // for (0..@as(usize, @intCast(text.string_contents.length))) |i| {
-                //     var glyph = face.getGlyph(text.string_contents.base_chars[i]) catch unreachable;
-                //     defer glyph.deinit();
-                //     const glyph_bitmap = glyph.glyphBitmap() catch unreachable;
-                //     drawFont(glyph_bitmap.bitmap, @intFromFloat(bounding_box.x), @intFromFloat(bounding_box.y));
-                // }
+                var fba = std.heap.FixedBufferAllocator.init(&library_alloc_buffer);
+                const fba_allocator = fba.allocator();
+                var buffer: std.ArrayListUnmanaged(u8) = .empty;
+                var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
+                while (it.nextCodepoint()) |codepoint| {
+                    if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
+                        buffer.clearRetainingCapacity();
+                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch unreachable;
+                        const pixels = buffer.items;
+                        for (0..dims.height) |j| {
+                            for (0..dims.width) |i| {
+                                frame.bitmap[j][i] |= pixels[j * dims.width + i];
+                            }
+                        }
+                    }
+                }
             },
             .image => {}, // NOT IMPLEMENTED
             .scissor_start => {

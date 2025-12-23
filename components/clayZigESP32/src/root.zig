@@ -16,7 +16,7 @@ fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_li
 }
 const truetype = @import("truetype");
 const ttf = truetype.load(@embedFile("font")) catch unreachable;
-const scale = ttf.scaleForPixelHeight(20);
+const scale = ttf.scaleForPixelHeight(1);
 
 const Bitmap = struct {
     const HEIGHT = 240;
@@ -147,7 +147,11 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 while (it.nextCodepoint()) |codepoint| {
                     if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
                         buffer.clearRetainingCapacity();
-                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch unreachable;
+                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch |err| switch (err) {
+                            error.OutOfMemory => truetype.GlyphBitmap.empty,
+                            error.GlyphNotFound => truetype.GlyphBitmap.empty,
+                            error.Charstring => truetype.GlyphBitmap.empty,
+                        };
                         const pixels = buffer.items;
                         for (0..dims.height) |j| {
                             for (0..dims.width) |i| {

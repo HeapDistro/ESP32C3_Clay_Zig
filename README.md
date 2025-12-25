@@ -6,3 +6,11 @@ The code is initially based off of an IDF example to send an image via SPI to a 
 
 This WIP and doesn't work yet.
 
+## TODOs
+[] - Fix all truetypes errors
+[] - Properly embed truetype code with clay
+[] - Refactor code, code is very very messy at the moment
+[] - Create new build target for debugging and developing UI, requires separating existing code into several files.
+[] - Write documention
+[] - Write README
+

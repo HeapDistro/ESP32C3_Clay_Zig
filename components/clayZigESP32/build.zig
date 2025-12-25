@@ -49,13 +49,13 @@ pub fn build(b: *std.Build) void {
     });
     lib_mod.addImport("zclay", zclay_dep.module("zclay"));
 
-    const truetype = b.dependency("TrueType", .{
+    const TrueType = b.dependency("TrueType", .{
         .target = target,
         .optimize = optimize,
     });
-    const truetype_module = truetype.module("TrueType");
+    const truetype_module = TrueType.module("TrueType");
 
-    lib_mod.addImport("truetype", truetype_module);
+    lib_mod.addImport("TrueType", truetype_module);
     lib_mod.addAnonymousImport("font", .{ .root_source_file = .{ .cwd_relative = "src/console.ttf" } });
 
     const lib = b.addLibrary(.{

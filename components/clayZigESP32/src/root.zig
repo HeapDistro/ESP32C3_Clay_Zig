@@ -14,25 +14,27 @@ fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_li
     _ = format;
     _ = args;
 }
-const truetype = @import("truetype");
-const ttf = truetype.load(@embedFile("font")) catch unreachable;
+const TrueType = @import("TrueType");
+const ttf = TrueType.load(@embedFile("font")) catch unreachable;
 const scale = ttf.scaleForPixelHeight(20);
 
 const Bitmap = struct {
+    const DisplayColor = packed struct(u16) { green: u6, red: u5, blue: u5 };
     const HEIGHT = 240;
     const WIDTH = 320;
-    bitmap: [HEIGHT][WIDTH]u16,
-    const DPI: u8 = 143; //TODO: should be a comptime calculation based off aspect ration and screen size
+    bitmap: [HEIGHT][WIDTH]DisplayColor,
+    fn init() Bitmap {
+        return .{ .bitmap = @splat(@splat(.{ .red = 0, .blue = 0, .green = 0 })) };
+    }
 };
+var frame: Bitmap = Bitmap.init();
 
 var allocMem: [50000]u8 = @splat(0);
 var library_alloc_buffer: [10000]u8 = @splat(0);
 
-var linesOrg: [2]u16 = .{0} ** 2;
+var linesOrg: [2]u16 = @splat(0);
 var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
 const PARALLEL_LINES: comptime_int = 16;
-//BLUE 5 bits RED 5 bits GREEN 6 bits
-var frame: Bitmap = .{ .bitmap = @splat(@splat(0)) };
 
 pub export fn app_main() void {
     // Init allocator
@@ -76,7 +78,7 @@ pub export fn app_main() void {
                     },
                 },
             )({
-                clay.text("Clay - UI Library\n", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
+                clay.text("ClayO\nTest", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
                 clay.UI()(
                     .{
                         .id = .ID("MainContent"),
@@ -103,6 +105,16 @@ fn measureText(clay_text: []const u8, config: *clay.TextElementConfig, user_data
     return .{ .w = 2, .h = 3 };
 }
 
+inline fn clayColorToDisplayColor(color: clay.Color) Bitmap.DisplayColor {
+    //TODO: why does the following code cause an illegal instruction?
+    // return .{
+    //     .red = @as(u5, @intFromFloat(color[0])),
+    //     .green = @as(u6, @intFromFloat(color[1])),
+    //     .blue = @as(u5, @intFromFloat(color[2])),
+    // };
+    return @bitCast(@as(u16, @intFromFloat(color[0])) << 11 | @as(u16, @intFromFloat(color[2])) << 6 | @as(u16, @intFromFloat(color[1])));
+}
+
 fn bitmapDrawRectangle(
     bitmap: *Bitmap,
     startX: u16,
@@ -112,7 +124,7 @@ fn bitmapDrawRectangle(
     bckgColor: clay.Color,
     border: clay.BoundingBox,
 ) void {
-    const color: u16 = @as(u16, @intFromFloat(bckgColor[0])) << 11 | @as(u16, @intFromFloat(bckgColor[1])) << 6 | @as(u16, @intFromFloat(bckgColor[2]));
+    const color: Bitmap.DisplayColor = clayColorToDisplayColor(bckgColor);
     for (startX..startX + width) |x| {
         for (startY..startY + height) |y| {
             if (x >= @as(u16, @intFromFloat(border.x)) and
@@ -143,26 +155,31 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 var fba = std.heap.FixedBufferAllocator.init(&library_alloc_buffer);
                 const fba_allocator = fba.allocator();
                 var buffer: std.ArrayListUnmanaged(u8) = .empty;
-                //var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
-                var it = (std.unicode.Utf8View.init("HELLOKIKO") catch unreachable).iterator();
+                var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
                 var f_idx: usize = 100;
+                var y_idx: usize = 0;
                 while (it.nextCodepoint()) |codepoint| : (f_idx += 15) {
+                    if (codepoint == '\n') {
+                        y_idx += 15;
+                        continue;
+                    }
                     if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
                         buffer.clearRetainingCapacity();
                         const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch |err| switch (err) {
                             // Trap errors for debugging
                             error.OutOfMemory => while (true) {},
-                            error.GlyphNotFound => while (true) {}, // error being called ???
+                            error.GlyphNotFound => while (true) {}, // Space
                             error.Charstring => while (true) {},
                         };
                         const pixels = buffer.items;
                         for (0..dims.height) |i| {
                             //const y_base: usize = @intFromFloat(bounding_box.y);
-                            const y_base: usize = 100;
+                            const y_base: usize = 100 + y_idx;
                             for (0..dims.width) |j| {
                                 //const x_base: usize = @intFromFloat(bounding_box.x);
                                 const x_base: usize = f_idx;
-                                frame.bitmap[y_base + i][x_base + j] = pixels[i * dims.width + j] >> 5;
+                                //TODO: below doesnt take into account anti-aliasing...
+                                frame.bitmap[y_base + i][x_base + j] = if (pixels[i * dims.width + j] != 0) clayColorToDisplayColor(command.render_data.text.text_color) else continue;
                             }
                         }
                     }
@@ -244,25 +261,20 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
 }
 
 fn sendRender() void {
-    var sendingLine: bool = false;
     var line: u1 = 0;
     var y: usize = 0;
     while (y < 240) : (y += PARALLEL_LINES) {
-        if (sendingLine) {
-            spi.send_line_finish();
-            sendingLine = true;
-        }
-
         var linePtr: [*c]u16 = lines[line];
 
         for (y..y + PARALLEL_LINES) |_y| {
             for (0..Bitmap.WIDTH) |x| {
-                linePtr.* = frame.bitmap[_y][x];
+                linePtr.* = @bitCast(frame.bitmap[_y][x]);
                 linePtr = linePtr + 1;
             }
         }
 
         line = if (line == 0) 1 else 0;
         spi.send_lines(@as(c_int, @intCast(y)), lines[line]);
+        spi.send_line_finish();
     }
 }

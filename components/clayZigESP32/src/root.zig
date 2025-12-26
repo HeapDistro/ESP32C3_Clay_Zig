@@ -29,22 +29,22 @@ const Bitmap = struct {
 };
 var frame: Bitmap = Bitmap.init();
 
-var allocMem: [50000]u8 = @splat(0);
+var alloc_mem: [50000]u8 = @splat(0);
 var library_alloc_buffer: [10000]u8 = @splat(0);
 
-var linesOrg: [2]u16 = @splat(0);
-var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&linesOrg)));
+var lines_org: [2]u16 = @splat(0);
+var lines: [*c][*c]u16 = @as([*c][*c]u16, @ptrCast(@alignCast(&lines_org)));
 const PARALLEL_LINES: comptime_int = 16;
 
 pub export fn app_main() void {
     // Init allocator
     Clay.setMaxElementCount(20);
-    const minMemorySize: u32 = Clay.minMemorySize();
-    if (minMemorySize > @sizeOf(@TypeOf(allocMem))) @panic("Clay minimum memory size is bigger than given buffer.");
-    const arena: Clay.Arena = Clay.createArenaWithCapacityAndMemory(&allocMem);
+    const min_memory_size: u32 = Clay.minMemorySize();
+    if (min_memory_size > @sizeOf(@TypeOf(alloc_mem))) @panic("Clay minimum memory size is bigger than given buffer.");
+    const arena: Clay.Arena = Clay.createArenaWithCapacityAndMemory(&alloc_mem);
     const dimensions: Clay.Dimensions = .{ .h = 240, .w = 320 };
-    const clayError: Clay.ErrorHandler = .{ .error_handler_function = null };
-    _ = Clay.initialize(arena, dimensions, clayError);
+    const clay_error: Clay.ErrorHandler = .{ .error_handler_function = null };
+    _ = Clay.initialize(arena, dimensions, clay_error);
     Clay.setMeasureTextFunction(void, {}, measureText);
 
     SPI.init_spi(lines);
@@ -117,16 +117,16 @@ inline fn clayColorToDisplayColor(color: Clay.Color) Bitmap.DisplayColor {
 
 fn bitmapDrawRectangle(
     bitmap: *Bitmap,
-    startX: u16,
-    startY: u16,
+    start_x: u16,
+    start_y: u16,
     width: u16,
     height: u16,
-    bckgColor: Clay.Color,
+    bckg_color: Clay.Color,
     border: Clay.BoundingBox,
 ) void {
-    const color: Bitmap.DisplayColor = clayColorToDisplayColor(bckgColor);
-    for (startX..startX + width) |x| {
-        for (startY..startY + height) |y| {
+    const color: Bitmap.DisplayColor = clayColorToDisplayColor(bckg_color);
+    for (start_x..start_x + width) |x| {
+        for (start_y..start_y + height) |y| {
             if (x >= @as(u16, @intFromFloat(border.x)) and
                 x < @as(u16, @intFromFloat(border.x + border.width)) and
                 y >= @as(u16, @intFromFloat(border.y)) and
@@ -139,8 +139,8 @@ fn bitmapDrawRectangle(
 }
 
 fn clayRender(render_commands: []Clay.RenderCommand) void {
-    const fullWindow: Clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
-    var scissorBox: Clay.BoundingBox = fullWindow;
+    const full_window: Clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
+    var scissor_box: Clay.BoundingBox = full_window;
 
     for (render_commands) |command| {
         const bounding_box: Clay.BoundingBox = .{
@@ -187,10 +187,10 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
             },
             .image => {}, // NOT IMPLEMENTED
             .scissor_start => {
-                scissorBox = bounding_box;
+                scissor_box = bounding_box;
             },
             .scissor_end => {
-                scissorBox = fullWindow;
+                scissor_box = full_window;
             },
             .rectangle => {
                 const data: Clay.RectangleRenderData = command.render_data.rectangle;
@@ -201,7 +201,7 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                     @intFromFloat(bounding_box.width),
                     @intFromFloat(bounding_box.height),
                     data.background_color,
-                    scissorBox,
+                    scissor_box,
                 );
             },
             .border => {
@@ -215,7 +215,7 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                         data.width.left,
                         @intFromFloat(bounding_box.height - data.corner_radius.top_left - data.corner_radius.bottom_left),
                         data.color,
-                        scissorBox,
+                        scissor_box,
                     );
                 }
                 // Right border
@@ -227,7 +227,7 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                         data.width.right,
                         @intFromFloat(bounding_box.height - data.corner_radius.top_right - data.corner_radius.bottom_right),
                         data.color,
-                        scissorBox,
+                        scissor_box,
                     );
                 }
                 // Top border
@@ -239,7 +239,7 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                         @intFromFloat(bounding_box.width - data.corner_radius.top_left - data.corner_radius.top_right),
                         data.width.top,
                         data.color,
-                        scissorBox,
+                        scissor_box,
                     );
                 }
                 // Bottom border
@@ -251,7 +251,7 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                         @intFromFloat(bounding_box.width - data.corner_radius.bottom_left - data.corner_radius.bottom_right),
                         data.width.bottom,
                         data.color,
-                        scissorBox,
+                        scissor_box,
                     );
                 }
             },
@@ -264,12 +264,12 @@ fn sendRender() void {
     var line: u1 = 0;
     var y: usize = 0;
     while (y < 240) : (y += PARALLEL_LINES) {
-        var linePtr: [*c]u16 = lines[line];
+        var line_ptr: [*c]u16 = lines[line];
 
         for (y..y + PARALLEL_LINES) |_y| {
             for (0..Bitmap.WIDTH) |x| {
-                linePtr.* = @bitCast(frame.bitmap[_y][x]);
-                linePtr = linePtr + 1;
+                line_ptr.* = @bitCast(frame.bitmap[_y][x]);
+                line_ptr = line_ptr + 1;
             }
         }
 

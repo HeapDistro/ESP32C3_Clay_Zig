@@ -1,10 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const spi = @cImport({
+const SPI = @cImport({
     @cInclude("c_main.h");
 });
 
-const clay = @import("zclay");
+const Clay = @import("zclay");
 
 pub const std_options: std.Options = .{ .logFn = logFn };
 
@@ -38,25 +38,25 @@ const PARALLEL_LINES: comptime_int = 16;
 
 pub export fn app_main() void {
     // Init allocator
-    clay.setMaxElementCount(20);
-    const minMemorySize: u32 = clay.minMemorySize();
+    Clay.setMaxElementCount(20);
+    const minMemorySize: u32 = Clay.minMemorySize();
     if (minMemorySize > @sizeOf(@TypeOf(allocMem))) @panic("Clay minimum memory size is bigger than given buffer.");
-    const arena: clay.Arena = clay.createArenaWithCapacityAndMemory(&allocMem);
-    const dimensions: clay.Dimensions = .{ .h = 240, .w = 320 };
-    const clayError: clay.ErrorHandler = .{ .error_handler_function = null };
-    _ = clay.initialize(arena, dimensions, clayError);
-    clay.setMeasureTextFunction(void, {}, measureText);
+    const arena: Clay.Arena = Clay.createArenaWithCapacityAndMemory(&allocMem);
+    const dimensions: Clay.Dimensions = .{ .h = 240, .w = 320 };
+    const clayError: Clay.ErrorHandler = .{ .error_handler_function = null };
+    _ = Clay.initialize(arena, dimensions, clayError);
+    Clay.setMeasureTextFunction(void, {}, measureText);
 
-    spi.init_spi(lines);
+    SPI.init_spi(lines);
 
     while (true) {
         // TODO: If touch is ever implemented update the pointer state here
-        //clay.Clay_SetPointerState()
-        //clay.UpdateScrollContainers()
+        //Clay.Clay_SetPointerState()
+        //Clay.UpdateScrollContainers()
 
-        clay.beginLayout();
+        Clay.beginLayout();
 
-        clay.UI()(
+        Clay.UI()(
             .{
                 .id = .ID("OuterContainer"),
                 .layout = .{
@@ -67,7 +67,7 @@ pub export fn app_main() void {
                 .background_color = .{ 250, 0, 255, 255 },
             },
         )({
-            clay.UI()(
+            Clay.UI()(
                 .{
                     .id = .ID("SideBar"),
                     .layout = .{
@@ -78,8 +78,8 @@ pub export fn app_main() void {
                     },
                 },
             )({
-                clay.text("ClayO\nTest", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
-                clay.UI()(
+                Clay.text("ClayO\nTest", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
+                Clay.UI()(
                     .{
                         .id = .ID("MainContent"),
                         .layout = .{
@@ -91,21 +91,21 @@ pub export fn app_main() void {
             });
         });
 
-        const render_commands: []clay.RenderCommand = clay.endLayout();
+        const render_commands: []Clay.RenderCommand = Clay.endLayout();
         clayRender(render_commands);
         sendRender();
     }
 }
 
 // TODO: this text rendering is not yet implemented
-fn measureText(clay_text: []const u8, config: *clay.TextElementConfig, user_data: void) clay.Dimensions {
+fn measureText(clay_text: []const u8, config: *Clay.TextElementConfig, user_data: void) Clay.Dimensions {
     _ = clay_text;
     _ = config;
     _ = user_data;
     return .{ .w = 2, .h = 3 };
 }
 
-inline fn clayColorToDisplayColor(color: clay.Color) Bitmap.DisplayColor {
+inline fn clayColorToDisplayColor(color: Clay.Color) Bitmap.DisplayColor {
     //TODO: why does the following code cause an illegal instruction?
     // return .{
     //     .red = @as(u5, @intFromFloat(color[0])),
@@ -121,8 +121,8 @@ fn bitmapDrawRectangle(
     startY: u16,
     width: u16,
     height: u16,
-    bckgColor: clay.Color,
-    border: clay.BoundingBox,
+    bckgColor: Clay.Color,
+    border: Clay.BoundingBox,
 ) void {
     const color: Bitmap.DisplayColor = clayColorToDisplayColor(bckgColor);
     for (startX..startX + width) |x| {
@@ -138,12 +138,12 @@ fn bitmapDrawRectangle(
     }
 }
 
-fn clayRender(render_commands: []clay.RenderCommand) void {
-    const fullWindow: clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
-    var scissorBox: clay.BoundingBox = fullWindow;
+fn clayRender(render_commands: []Clay.RenderCommand) void {
+    const fullWindow: Clay.BoundingBox = .{ .y = 0, .x = 0, .height = Bitmap.HEIGHT, .width = Bitmap.WIDTH };
+    var scissorBox: Clay.BoundingBox = fullWindow;
 
     for (render_commands) |command| {
-        const bounding_box: clay.BoundingBox = .{
+        const bounding_box: Clay.BoundingBox = .{
             .x = command.bounding_box.x,
             .y = command.bounding_box.y,
             .height = command.bounding_box.height,
@@ -193,7 +193,7 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 scissorBox = fullWindow;
             },
             .rectangle => {
-                const data: clay.RectangleRenderData = command.render_data.rectangle;
+                const data: Clay.RectangleRenderData = command.render_data.rectangle;
                 bitmapDrawRectangle(
                     &frame,
                     @intFromFloat(bounding_box.x),
@@ -205,7 +205,7 @@ fn clayRender(render_commands: []clay.RenderCommand) void {
                 );
             },
             .border => {
-                const data: clay.BorderRenderData = command.render_data.border;
+                const data: Clay.BorderRenderData = command.render_data.border;
                 // Left border
                 if (data.width.left > 0) {
                     bitmapDrawRectangle(
@@ -274,7 +274,7 @@ fn sendRender() void {
         }
 
         line = if (line == 0) 1 else 0;
-        spi.send_lines(@as(c_int, @intCast(y)), lines[line]);
-        spi.send_line_finish();
+        SPI.send_lines(@as(c_int, @intCast(y)), lines[line]);
+        SPI.send_line_finish();
     }
 }

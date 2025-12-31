@@ -78,7 +78,7 @@ pub export fn app_main() void {
                     },
                 },
             )({
-                Clay.text("ClayO\nTest", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
+                Clay.text("Herro_evory_tirudo", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
                 Clay.UI()(
                     .{
                         .id = .ID("MainContent"),
@@ -178,6 +178,10 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                             for (0..dims.width) |j| {
                                 //const x_base: usize = @intFromFloat(bounding_box.x);
                                 const x_base: usize = f_idx;
+                                if ((y_base + i) >= Bitmap.HEIGHT or (x_base + j) >= Bitmap.WIDTH) {
+                                    // font is outside of frame
+                                    continue;
+                                }
                                 //TODO: below doesnt take into account anti-aliasing...
                                 frame.bitmap[y_base + i][x_base + j] = if (pixels[i * dims.width + j] != 0) clayColorToDisplayColor(command.render_data.text.text_color) else continue;
                             }

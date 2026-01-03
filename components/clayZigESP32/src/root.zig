@@ -5,6 +5,7 @@ const SPI = @cImport({
 });
 
 const Clay = @import("zclay");
+const ClayLayout = @import("clay_layout.zig");
 
 pub const std_options: std.Options = .{ .logFn = logFn };
 
@@ -16,7 +17,8 @@ fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_li
 }
 const TrueType = @import("TrueType");
 const ttf = TrueType.load(@embedFile("font")) catch unreachable;
-const scale = ttf.scaleForPixelHeight(20);
+const font_pixel_height = 20;
+const ttf_scale = ttf.scaleForPixelHeight(font_pixel_height);
 
 const Bitmap = struct {
     const DisplayColor = packed struct(u16) { green: u6, red: u5, blue: u5 };
@@ -54,45 +56,7 @@ pub export fn app_main() void {
         //Clay.Clay_SetPointerState()
         //Clay.UpdateScrollContainers()
 
-        Clay.beginLayout();
-
-        Clay.UI()(
-            .{
-                .id = .ID("OuterContainer"),
-                .layout = .{
-                    .sizing = .{ .w = .grow, .h = .grow },
-                    .padding = .all(4),
-                    .child_gap = 4,
-                },
-                .background_color = .{ 250, 0, 255, 255 },
-            },
-        )({
-            Clay.UI()(
-                .{
-                    .id = .ID("SideBar"),
-                    .layout = .{
-                        .direction = .top_to_bottom,
-                        .sizing = .{ .w = .fixed(100), .h = .fixed(200) },
-                        .padding = .all(4),
-                        .child_gap = 4,
-                    },
-                },
-            )({
-                Clay.text("Herro_evory_tirudo", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
-                Clay.UI()(
-                    .{
-                        .id = .ID("MainContent"),
-                        .layout = .{
-                            .sizing = .{ .w = .grow, .h = .grow },
-                        },
-                        .background_color = .{ 127, 127, 0, 255 },
-                    },
-                )({});
-            });
-        });
-
-        const render_commands: []Clay.RenderCommand = Clay.endLayout();
-        clayRender(render_commands);
+        clayRender(ClayLayout.drawLayout());
         sendRender();
     }
 }
@@ -157,27 +121,27 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                 var buffer: std.ArrayListUnmanaged(u8) = .empty;
                 var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
                 var f_idx: usize = 100;
-                var y_idx: usize = 0;
+                const y_idx: usize = 0;
                 while (it.nextCodepoint()) |codepoint| : (f_idx += 15) {
                     if (codepoint == '\n') {
-                        y_idx += 15;
+                        //y_idx += 100;
+                        f_idx = 100;
                         continue;
                     }
                     if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
                         buffer.clearRetainingCapacity();
-                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, scale, scale) catch |err| switch (err) {
+                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, ttf_scale, ttf_scale) catch |err| switch (err) {
                             // Trap errors for debugging
                             error.OutOfMemory => while (true) {},
                             error.GlyphNotFound => while (true) {}, // Space
                             error.Charstring => while (true) {},
                         };
                         const pixels = buffer.items;
-                        for (0..dims.height) |i| {
-                            //const y_base: usize = @intFromFloat(bounding_box.y);
-                            const y_base: usize = 100 + y_idx;
+                        for (0..dims.height) |i| { //16
+                            const y_base: usize = @as(usize, @intFromFloat(bounding_box.y)) + y_idx;
                             for (0..dims.width) |j| {
-                                //const x_base: usize = @intFromFloat(bounding_box.x);
-                                const x_base: usize = f_idx;
+                                const x_base: usize = @as(usize, @intFromFloat(bounding_box.x)) + f_idx;
+                                //const x_base: usize = f_idx;
                                 if ((y_base + i) >= Bitmap.HEIGHT or (x_base + j) >= Bitmap.WIDTH) {
                                     // font is outside of frame
                                     continue;

@@ -24,7 +24,7 @@ pub fn drawLayout() []Clay.RenderCommand {
                 },
             },
         )({
-            Clay.text("Herro_evory_tirudo", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
+            Clay.text("Hi_from_clay", .{ .font_size = 24, .color = .{ 0, 255, 255, 255 } });
             Clay.UI()(
                 .{
                     .id = .ID("MainContent"),

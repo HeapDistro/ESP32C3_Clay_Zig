@@ -1,8 +1,8 @@
 const std = @import("std");
 
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
+///! We build two targets one, the main one targets the RISC-V core in ESP32-C3
+///! The other one runs on the default target and renders the same layout as the ESP32 using Raylib,
+///! this is done in order to compare the rendered layout for the ESP32.
 pub fn build(b: *std.Build) void {
     const target_query: std.Target.Query =
         .{
@@ -56,7 +56,8 @@ pub fn build(b: *std.Build) void {
     const truetype_module = TrueType.module("TrueType");
 
     lib_mod.addImport("TrueType", truetype_module);
-    lib_mod.addAnonymousImport("font", .{ .root_source_file = .{ .cwd_relative = "src/console.ttf" } });
+    const font_file: std.Build.LazyPath = .{ .cwd_relative = "src/console.ttf" };
+    lib_mod.addAnonymousImport("font", .{ .root_source_file = font_file });
 
     const lib = b.addLibrary(.{
         .linkage = .static,
@@ -65,4 +66,40 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(lib);
+
+    // Test layout target, target architecture is completely different
+    {
+        const layout_test_target = b.resolveTargetQuery(.{});
+        const layout_test_optimization = b.standardOptimizeOption(.{});
+
+        const layout_test_module = b.createModule(.{
+            .root_source_file = b.path("src/main_layout_test.zig"),
+            .target = layout_test_target,
+            .optimize = layout_test_optimization,
+        });
+        const layout_test_zclay_dep = b.dependency("zclay", .{
+            .target = layout_test_target,
+            .optimize = layout_test_optimization,
+        });
+        layout_test_module.addImport("zclay", layout_test_zclay_dep.module("zclay"));
+
+        const raylib_dep = b.dependency("raylib_zig", .{
+            .target = layout_test_target,
+            .optimize = layout_test_optimization,
+        });
+        layout_test_module.addImport("raylib", raylib_dep.module("raylib"));
+        layout_test_module.linkLibrary(raylib_dep.artifact("raylib"));
+        const layout_test_exe = b.addExecutable(.{ .name = "layout_test", .root_module = layout_test_module });
+
+        layout_test_module.addAnonymousImport("font", .{ .root_source_file = font_file });
+
+        b.installArtifact(layout_test_exe);
+        const run_cmd = b.addRunArtifact(layout_test_exe);
+        run_cmd.step.dependOn(b.getInstallStep());
+
+        if (b.args) |args| run_cmd.addArgs(args);
+
+        const run_step = b.step("layout", "Run the layout test");
+        run_step.dependOn(&run_cmd.step);
+    }
 }

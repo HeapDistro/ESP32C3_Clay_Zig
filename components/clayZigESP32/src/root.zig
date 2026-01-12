@@ -70,13 +70,11 @@ fn measureText(clay_text: []const u8, config: *Clay.TextElementConfig, user_data
 }
 
 inline fn clayColorToDisplayColor(color: Clay.Color) Bitmap.DisplayColor {
-    //TODO: why does the following code cause an illegal instruction?
-    // return .{
-    //     .red = @as(u5, @intFromFloat(color[0])),
-    //     .green = @as(u6, @intFromFloat(color[1])),
-    //     .blue = @as(u5, @intFromFloat(color[2])),
-    // };
-    return @bitCast(@as(u16, @intFromFloat(color[0])) << 11 | @as(u16, @intFromFloat(color[2])) << 6 | @as(u16, @intFromFloat(color[1])));
+    return .{
+        .red = @truncate(@as(u8, @intFromFloat(color[0])) >> 3),
+        .green = @truncate(@as(u8, @intFromFloat(color[1])) >> 2),
+        .blue = @truncate(@as(u8, @intFromFloat(color[2])) >> 3),
+    };
 }
 
 fn bitmapDrawRectangle(

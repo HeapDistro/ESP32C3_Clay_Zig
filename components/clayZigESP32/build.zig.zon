@@ -41,8 +41,8 @@
             .hash = "zclay-0.2.2-Ej1rkOzRAADy3oyFJ0I3aIJp38Kwsv9DMa0XWt84dRVW",
         },
         .TrueType = .{
-            .url = "git+https://codeberg.org/andrewrk/TrueType#604d4e185e4a06a60a82c5b1212fcac15e1f19a4",
-            .hash = "TrueType-0.0.0-Ne-mWPNvAQC1vPUhKTIwuwMr2_bIRK4jUROcNoDtqws2",
+            .url = "git+https://codeberg.org/andrewrk/TrueType#c1d4b62157ca47f6d551c45a1c485b799c6dbf0a",
+            .hash = "TrueType-0.0.0-Ne-mWAdyAQBpSstW5tKe3xnKdf0hLBdk0FYAxm1MjvYi",
         },
         .raylib_zig = .{
             .url = "git+https://github.com/johan0A/raylib-zig#114f58b88ff6a91f9a14f65143c5a3fe16f27f04",

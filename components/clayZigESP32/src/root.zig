@@ -7,14 +7,6 @@ const SPI = @cImport({
 const Clay = @import("zclay");
 const ClayLayout = @import("clay_layout.zig");
 
-pub const std_options: std.Options = .{ .logFn = logFn };
-
-fn logFn(comptime message_level: std.log.Level, comptime scope: @TypeOf(.enum_literal), comptime format: []const u8, args: anytype) void {
-    _ = message_level;
-    _ = scope;
-    _ = format;
-    _ = args;
-}
 const TrueType = @import("TrueType");
 const ttf = TrueType.load(@embedFile("font")) catch unreachable;
 const font_pixel_height = 20;
@@ -66,7 +58,7 @@ fn measureText(clay_text: []const u8, config: *Clay.TextElementConfig, user_data
     _ = clay_text;
     _ = config;
     _ = user_data;
-    return .{ .w = 2, .h = 3 };
+    return .{ .w = 2, .h = 1 };
 }
 
 inline fn clayColorToDisplayColor(color: Clay.Color) Bitmap.DisplayColor {
@@ -118,37 +110,38 @@ fn clayRender(render_commands: []Clay.RenderCommand) void {
                 const fba_allocator = fba.allocator();
                 var buffer: std.ArrayListUnmanaged(u8) = .empty;
                 var it = (std.unicode.Utf8View.init(command.render_data.text.string_contents.base_chars[0..@intCast(command.render_data.text.string_contents.length)]) catch unreachable).iterator();
-                var f_idx: usize = 100;
+
+                var offset: usize = 0;
                 const y_idx: usize = 0;
-                while (it.nextCodepoint()) |codepoint| : (f_idx += 15) {
+                while (it.nextCodepoint()) |codepoint| {
                     if (codepoint == '\n') {
-                        //y_idx += 100;
-                        f_idx = 100;
+                        offset = 0;
                         continue;
                     }
-                    if (ttf.codepointGlyphIndex(codepoint)) |glyph| {
-                        buffer.clearRetainingCapacity();
-                        const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, ttf_scale, ttf_scale) catch |err| switch (err) {
-                            // Trap errors for debugging
-                            error.OutOfMemory => while (true) {},
-                            error.GlyphNotFound => while (true) {}, // Space
-                            error.Charstring => while (true) {},
-                        };
-                        const pixels = buffer.items;
-                        for (0..dims.height) |i| { //16
-                            const y_base: usize = @as(usize, @intFromFloat(bounding_box.y)) + y_idx;
-                            for (0..dims.width) |j| {
-                                const x_base: usize = @as(usize, @intFromFloat(bounding_box.x)) + f_idx;
-                                //const x_base: usize = f_idx;
-                                if ((y_base + i) >= Bitmap.HEIGHT or (x_base + j) >= Bitmap.WIDTH) {
-                                    // font is outside of frame
-                                    continue;
-                                }
-                                //TODO: below doesnt take into account anti-aliasing...
-                                frame.bitmap[y_base + i][x_base + j] = if (pixels[i * dims.width + j] != 0) clayColorToDisplayColor(command.render_data.text.text_color) else continue;
+                    const glyph = ttf.codepointGlyphIndex(codepoint);
+                    if (glyph == .notdef) {
+                        //TODO
+                    }
+                    buffer.clearRetainingCapacity();
+                    const dims = ttf.glyphBitmap(fba_allocator, &buffer, glyph, ttf_scale, ttf_scale) catch |err| switch (err) {
+                        // Trap errors for debugging
+                        error.GlyphNotFound => while (true) {}, // Space
+                        else => while (true) {},
+                    };
+                    const pixels = buffer.items;
+                    for (0..dims.height) |i| { //16
+                        const y_base: usize = @as(usize, @intFromFloat(bounding_box.y)) + y_idx;
+                        for (0..dims.width) |j| {
+                            const x_base: usize = @as(usize, @intFromFloat(bounding_box.x)) + offset;
+                            //const x_base: usize = f_idx;
+                            if ((y_base + i) >= Bitmap.HEIGHT or (x_base + j) >= Bitmap.WIDTH) {
+                                continue; // font is outside of frame
                             }
+                            //TODO: below doesnt take into account anti-aliasing...
+                            frame.bitmap[y_base + i][x_base + j] = if (pixels[i * dims.width + j] != 0) clayColorToDisplayColor(command.render_data.text.text_color) else continue;
                         }
                     }
+                    offset += dims.width + command.render_data.text.letter_spacing * 2;
                 }
             },
             .image => {}, // NOT IMPLEMENTED
